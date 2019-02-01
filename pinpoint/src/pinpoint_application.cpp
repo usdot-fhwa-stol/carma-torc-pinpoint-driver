@@ -63,7 +63,7 @@ void PinPointApplication::initialize()
 {
 
     // CAV platform requires that the position api falls under the /pinpoint/position namespace
-    position_api_nh_.reset(new ros::NodeHandle("~position"));
+    position_api_nh_.reset(new ros::NodeHandle("/position"));
 
     tf_buffer_.reset(new tf2_ros::Buffer());
     tf_listener_.reset(new tf2_ros::TransformListener(*tf_buffer_));
