@@ -33,7 +33,7 @@ jobs:
         environment:
           TERM: xterm # use xterm to get full display output from build
           INIT_ENV: /home/carma/.base-image/init-env.sh
-    working_directory: "/opt/carma/"s
+    working_directory: "/opt/carma/"
     # Execution steps
     steps:
       - run:
