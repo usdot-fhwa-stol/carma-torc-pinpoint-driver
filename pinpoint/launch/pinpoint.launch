@@ -1,5 +1,5 @@
 <!--
-  Copyright (C) 2018 LEIDOS.
+  Copyright (C) 2018-2019 LEIDOS.
 
   Licensed under the Apache License, Version 2.0 (the "License"); you may not
   use this file except in compliance with the License. You may obtain a copy of
@@ -20,12 +20,15 @@
   <arg name="odom_frame" default="odom" doc="The name of the local planning frame"/>
   <arg name="base_link_frame" default="base_link" doc="The name of the robot base frame"/>
   <arg name="sensor_frame" default="pinpoint" doc="The name of the pinpoint device frame"/>
+  <arg name="remap_ns" default="/"/>
 
-  <node pkg="pinpoint" type="pinpoint_node" name="pin_point_application">
-    <param name="address" value="$(arg address)"/>
-    <param name="loc_port" value="$(arg loc_port)"/>
-    <param name="odom_frame" value="$(arg odom_frame)"/>
-    <param name="base_link_frame" value="$(arg base_link_frame)"/>
-    <param name="sensor_frame" value="$(arg sensor_frame)"/>
-  </node>
+  <group ns="$(arg remap_ns)">
+    <node pkg="pinpoint" type="pinpoint_node" name="pin_point_application">
+      <param name="address" value="$(arg address)"/>
+      <param name="loc_port" value="$(arg loc_port)"/>
+      <param name="odom_frame" value="$(arg odom_frame)"/>
+      <param name="base_link_frame" value="$(arg base_link_frame)"/>
+      <param name="sensor_frame" value="$(arg sensor_frame)"/>
+    </node>
+  </group>
 </launch>
