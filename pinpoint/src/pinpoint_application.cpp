@@ -55,7 +55,7 @@ PinPointApplication::PinPointApplication(int argc, char **argv) : cav::DriverApp
 {
     cav_msgs::DriverStatus status;
     status.status = cav_msgs::DriverStatus::OFF;
-    status.position = true;
+    status.gnss = true;
     setStatus(status);
 }
 
