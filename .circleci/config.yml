@@ -49,7 +49,7 @@ jobs:
           name: Pull Deps
           command: |
             source ${INIT_ENV}
-            ./CARMATorcPinpointDriver/docker/checkout.sh
+            ./CARMATorcPinpointDriver/docker/checkout.sh ${PWD}
       - run:
           name: Build Driver
           command: |
