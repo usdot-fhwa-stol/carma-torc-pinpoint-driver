@@ -18,5 +18,5 @@
 
 set -ex
 
-git clone https://github.com/usdot-fhwa-stol/CARMAMsgs.git ~/src/CARMAMsgs --branch Version_2.9.0
-git clone https://github.com/usdot-fhwa-stol/CARMAUtils.git ~/src/CARMAUtils --branch Version_2.9.0
+git clone https://github.com/usdot-fhwa-stol/CARMAMsgs.git ~/src/CARMAMsgs --branch Version_2.9.0 --depth 1
+git clone https://github.com/usdot-fhwa-stol/CARMAUtils.git ~/src/CARMAUtils --branch Version_2.9.0 --depth 1
