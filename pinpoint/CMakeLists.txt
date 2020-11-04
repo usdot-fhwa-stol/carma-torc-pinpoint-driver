@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   cav_msgs
   cav_srvs
   sensor_msgs
+  gps_common
   geometry_msgs
   bondcpp
   roscpp

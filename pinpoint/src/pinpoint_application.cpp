@@ -33,8 +33,7 @@
  */
 
 #include <pinpoint_application.h>
-
-#include <sensor_msgs/NavSatFix.h>
+#include <gps_common/GPSFix.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <cav_msgs/HeadingStamped.h>
@@ -96,7 +95,7 @@ void PinPointApplication::initialize()
     pinpoint_.onVelocityChanged.connect([this](torc::PinPointVelocity const &vel) { onVelocityChangedHandler(vel); });
 
     // GlobalPose
-    global_pose_pub_ = position_api_nh_->advertise<sensor_msgs::NavSatFix>("nav_sat_fix", 1);
+    global_pose_pub_ = position_api_nh_->advertise<gps_common::GPSFix>("gps_common_fix", 1);
     api_.push_back(global_pose_pub_.getTopic());
 
     pinpoint_.onGlobalPoseChanged
@@ -129,10 +128,6 @@ void PinPointApplication::initialize()
         std::lock_guard<std::mutex> lock(heartbeat_mutex_);
         last_heartbeat_time_ = ros::Time::now();
     });
-
-    // Heading
-    heading_pub_ = position_api_nh_->advertise<cav_msgs::HeadingStamped>("heading", 1);
-    api_.push_back(heading_pub_.getTopic());
 
     updater_.setHardwareID("PinPoint");
     diagnostic_timer_ = nh_->createTimer(ros::Duration(1), &PinPointApplication::diagnosticUpdate, this);
@@ -220,9 +215,10 @@ void PinPointApplication::onVelocityChangedHandler(const torc::PinPointVelocity 
  */
 void PinPointApplication::onGlobalPoseChangedHandler(const torc::PinPointGlobalPose &pose) 
 {
-    /// <a href="http://docs.ros.org/api/sensor_msgs/html/msg/NavSatFix.html">http://docs.ros.org/api/sensor_msgs/html/msg/NavSatFix.html</a>
-    sensor_msgs::NavSatFix msg;
+   
+    gps_common::GPSFix msg; 
     msg.header.frame_id = sensor_frame;
+
     try 
     {
         msg.header.stamp.fromNSec(pose.time * static_cast<uint64_t>(1000));
@@ -232,30 +228,27 @@ void PinPointApplication::onGlobalPoseChangedHandler(const torc::PinPointGlobalP
         ROS_WARN_STREAM("onGlobalPoseChangedHandler threw exception in ros::TimeBase::fromNSec(), time : " << pose.time);
         return;
     }
+
     msg.altitude = pose.altitude;
     msg.longitude = pose.longitude;
     msg.latitude = pose.latitude;
 
     ROS_DEBUG_STREAM("Lat: " << pose.latitude << " Lon: " << pose.longitude << " Alt: " << pose.altitude);
 
-    msg.position_covariance_type = sensor_msgs::NavSatFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
+    msg.position_covariance_type = gps_common::GPSFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
     msg.position_covariance = {latest_filter_accuracy_.position.east * latest_filter_accuracy_.position.east, 0.0, 0.0,
                                0.0, latest_filter_accuracy_.position.north * latest_filter_accuracy_.position.north,
                                0.0,
                                0.0, 0.0, latest_filter_accuracy_.position.down * latest_filter_accuracy_.position.down};
 
-    msg.status.service = sensor_msgs::NavSatStatus::SERVICE_GPS;
-    msg.status.status = sensor_msgs::NavSatStatus::STATUS_FIX;
-    global_pose_pub_.publish(msg);
-
-    cav_msgs::HeadingStamped heading;
-    heading.header = msg.header;
-    heading.header.frame_id = "0"; // no frame
+    msg.status.position_source = gps_common::GPSStatus::SOURCE_GPS;
+    msg.status.status = gps_common::GPSStatus::STATUS_FIX;
 
     // Convert yaw [-180,180] to  [0,360] degrees east of north
-    heading.heading = pose.yaw < 0 ? 360 + pose.yaw : pose.yaw;
+    msg.track = pose.yaw < 0 ? 360 + pose.yaw : pose.yaw;
 
-    heading_pub_.publish(heading);
+    global_pose_pub_.publish(msg);
+
 }
 
 void PinPointApplication::onLocalPoseChangedHandler(const torc::PinPointLocalPose &pose) 
@@ -388,13 +381,13 @@ void PinPointApplication::onStatusConditionChangedHandler(const torc::PinPointLo
 
     // We assume status is unchanged if either of the sets contain items then we set status accordingly
     cav_msgs::DriverStatus status = getStatus();
-    if (error_set_.size() > 0) 
+    if (!error_set_.empty()) 
     {
         status.status = cav_msgs::DriverStatus::FAULT;
         setStatus(status);
         ROS_WARN_STREAM("Publishing FAULT status. " << error_set_.size() << " errors.");
     } 
-    else if (warning_set_.size() > 0)
+    else if (!warning_set_.empty())
     {
         status.status = cav_msgs::DriverStatus::DEGRADED;
         setStatus(status);
