@@ -33,7 +33,7 @@
  */
 
 #include <pinpoint_application.h>
-#include<gps_common/GPSFix.h>
+#include <gps_common/GPSFix.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <cav_msgs/HeadingStamped.h>
@@ -381,13 +381,13 @@ void PinPointApplication::onStatusConditionChangedHandler(const torc::PinPointLo
 
     // We assume status is unchanged if either of the sets contain items then we set status accordingly
     cav_msgs::DriverStatus status = getStatus();
-    if (error_set_.size() > 0) 
+    if (!error_set_.empty()) 
     {
         status.status = cav_msgs::DriverStatus::FAULT;
         setStatus(status);
         ROS_WARN_STREAM("Publishing FAULT status. " << error_set_.size() << " errors.");
     } 
-    else if (warning_set_.size() > 0)
+    else if (!warning_set_.empty())
     {
         status.status = cav_msgs::DriverStatus::DEGRADED;
         setStatus(status);
