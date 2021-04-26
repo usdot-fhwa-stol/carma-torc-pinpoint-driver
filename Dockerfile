@@ -35,7 +35,7 @@ LABEL org.label-schema.vcs-url="https://github.com/usdot-fhwa-stol/carma-torc-pi
 LABEL org.label-schema.vcs-ref=${VCS_REF}
 LABEL org.label-schema.build-date=${BUILD_DATE}
 
-COPY --from=setup /home/carma/install /opt/carma/app/bin
-RUN sudo chmod -R +x /opt/carma/app/bin
+COPY --from=setup /home/carma/install /opt/carma/install
+RUN sudo chmod -R +x /opt/carma/install
 
 CMD  [ "wait-for-it.sh", "localhost:11311", "--", "roslaunch", "pinpoint", "pinpoint.launch", "remap_ns:=/saxton_cav/drivers" ]
