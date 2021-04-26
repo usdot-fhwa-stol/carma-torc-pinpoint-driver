@@ -16,7 +16,7 @@
   <run_depend>geometry_msgs</run_depend>
   <run_depend>sensor_msgs</run_depend>
   <run_depend>roscpp</run_depend>
-  <run_depend>pinpoint_driver</run_depend>>
+  <run_depend>pinpoint_driver</run_depend>
   <run_depend>gps_common</run_depend>>
 
 
