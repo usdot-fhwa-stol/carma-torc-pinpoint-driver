@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(pinpoint)
 
-## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++11)
+find_package(carma_cmake_common REQUIRED)
+carma_check_ros_version(1)
+carma_package()
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -13,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   cav_msgs
   cav_srvs
   sensor_msgs
+  gps_common
   geometry_msgs
   bondcpp
   roscpp

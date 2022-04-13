@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#  Copyright (C) 2018-2019 LEIDOS.
+#  Copyright (C) 2018-2020 LEIDOS.
 # 
 #  Licensed under the Apache License, Version 2.0 (the "License"); you may not
 #  use this file except in compliance with the License. You may obtain a copy of
@@ -15,8 +15,14 @@
 #  the License.
 
 # CARMA packages checkout script
+# Optional argument to set the root checkout directory with no ending '/' default is '~'
 
 set -ex
 
-git clone https://github.com/usdot-fhwa-stol/CARMAMsgs.git ~/src/CARMAMsgs
-git clone https://github.com/usdot-fhwa-stol/CARMADriverUtils.git ~/src/CARMADriverUtils
+dir=~
+if [[ -n ${1} ]]; then
+      dir=${1}
+fi
+
+git clone https://github.com/usdot-fhwa-stol/carma-msgs.git ${dir}/src/CARMAMsgs --branch carma-system-4.0.0 --depth 1
+git clone https://github.com/usdot-fhwa-stol/carma-utils.git ${dir}/src/CARMAUtils --branch carma-system-4.0.0 --depth 1

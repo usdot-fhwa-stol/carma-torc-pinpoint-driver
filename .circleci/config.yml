@@ -1,5 +1,5 @@
 version: 2
-#  Copyright (C) 2018-2019 LEIDOS.
+#  Copyright (C) 2018-2020 LEIDOS.
 # 
 #  Licensed under the Apache License, Version 2.0 (the "License"); you may not
 #  use this file except in compliance with the License. You may obtain a copy of
@@ -28,7 +28,7 @@ jobs:
     # Pull docker image from docker hub
     # XTERM used for better catkin_make output
     docker:
-      - image: usdotfhwastol/carma-base-ci:2.8.4
+      - image: usdotfhwastol/carma-base:carma-system-4.0.0
         user: carma
         environment:
           TERM: xterm # use xterm to get full display output from build
@@ -43,19 +43,13 @@ jobs:
             mkdir src
             cd src
             mkdir CARMATorcPinpointDriver
-            mkdir CARMAMsgs
       - checkout:
           path: src/CARMATorcPinpointDriver
       - run: 
-          name: Pull CARMAMsgs
+          name: Pull Deps
           command: |
             source ${INIT_ENV}
-            git clone -b develop --depth 1 git@github.com:usdot-fhwa-stol/CARMAMsgs.git src/CARMAMsgs
-      - run: 
-          name: Pull CARMADriverUtils
-          command: |
-            source ${INIT_ENV}
-            git clone -b develop --depth 1 git@github.com:usdot-fhwa-stol/CARMADriverUtils.git src/CARMADriverUtils
+            ./src/CARMATorcPinpointDriver/docker/checkout.sh ${PWD}
       - run:
           name: Build Driver
           command: |
