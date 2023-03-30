@@ -172,32 +172,32 @@ void PinPointApplication::onVelocityChangedHandler(const torc::PinPointVelocity 
         return;
     }
 
-    geometry_msgs::TransformStamped tf;
-    try 
-    {
-        tf = tf_buffer_->lookupTransform(base_link_frame,sensor_frame,msg.header.stamp);
-    }
-    catch(tf2::TransformException e)
-    {
-        ROS_WARN_STREAM_THROTTLE(5,"Exception looking up transform: " << e.what());
-        return;
-    }
+    // geometry_msgs::TransformStamped tf;
+    // try 
+    // {
+    //     tf = tf_buffer_->lookupTransform(base_link_frame,sensor_frame,msg.header.stamp);
+    // }
+    // catch(tf2::TransformException e)
+    // {
+    //     ROS_WARN_STREAM_THROTTLE(5,"Exception looking up transform: " << e.what());
+    //     return;
+    // }
 
     geometry_msgs::Vector3Stamped vec_in, vec_out;
     vec_in.vector.x = vel.forward_vel;
     vec_in.vector.y = vel.right_vel;
     vec_in.vector.z = vel.down_vel;
-    tf2::doTransform(vec_in,vec_out,tf);
+    // tf2::doTransform(vec_in,vec_out,tf);
 
-    msg.twist.linear.x = vec_out.vector.x;
-    msg.twist.linear.y = vec_out.vector.y;
-    msg.twist.linear.z = vec_out.vector.z;
+    msg.twist.linear.x = vec_in.vector.x; // Changed vec_out to vec_in
+    msg.twist.linear.y = vec_in.vector.y; // Changed vec_out to vec_in
+    msg.twist.linear.z = vec_in.vector.z; // Changed vec_out to vec_in
 
     vec_in.vector.x = vel.roll_rate;
     vec_in.vector.y = vel.pitch_rate;
     vec_in.vector.z = vel.yaw_rate;
 
-    tf2::doTransform(vec_in,vec_out,tf);
+    // tf2::doTransform(vec_in,vec_out,tf);
 
     msg.twist.angular.x = vel.roll_rate;
     msg.twist.angular.y = vel.pitch_rate;
