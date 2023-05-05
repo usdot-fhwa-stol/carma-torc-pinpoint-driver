@@ -201,7 +201,6 @@ install(TARGETS pinpoint_node
 install(DIRECTORY
         launch
         cfg
-        urdf
         DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
         PATTERN ".svn" EXCLUDE
         )
