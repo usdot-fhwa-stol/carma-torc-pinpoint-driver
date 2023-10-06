@@ -68,7 +68,7 @@ void PinPointApplication::initialize()
 
     // Pinpoint address
     pnh_->param<std::string>("address", config_.address, "10.26.4.73");
-    pnh_->param<std::string>("gps_port", config_.loc_port, "9503");
+    pnh_->param<std::string>("loc_port", config_.loc_port, "9503");
 
     // Frames
     pnh_->param<std::string>("odom_frame", odom_frame, "odom");
@@ -144,12 +144,13 @@ void PinPointApplication::onDisconnectHandler()
  * We don't have access to whether or not the pinpoint has RTK corrections active
  *
  */
-gps_common::GPSStatus PinPointApplication::PinpointGPSInfoToROSGPSStatus(torc::FixType fixType)
+uint8_t PinPointApplication::PinpointGPSInfoToROSGPSStatus(torc::FixType fixType)
 {
     switch (fixType)
     {
         case torc::FixType::Unknown:
         case torc::FixType::None:
+        default:
         {
             return gps_common::GPSStatus::STATUS_NO_FIX;
         }
@@ -202,15 +203,15 @@ void PinPointApplication::onRawGPSDataChangedHandler(const torc::PinPointRawGPSD
     ROS_DEBUG_STREAM("Lat: " << position.latitude << " Lon: " << position.longitude << " Alt: " << position.altitude);
 
     msg.track = latest_heading_.heading < 0 ? 360 + latest_heading_.heading : latest_heading_.heading;
-    msg.speed = math.sqrt(math.pow(position.lat_vel, 2) + math.pow(position.lon_vel, 2));
+    msg.speed = sqrt(position.lat_vel*position.lat_vel + position.lat_vel*position.lat_vel);
     msg.climb = -position.down_vel;
 
     msg.err = position.pos_acc;
     msg.err_horz = position.pos_acc;
     msg.err_vert = position.pos_acc;
     msg.err_track = latest_heading_.heading_acc;
-    msg.error_speed = position.vel_acc;
-    msg.error_climb = position.vel_acc;
+    msg.err_speed = position.vel_acc;
+    msg.err_climb = position.vel_acc;
 
     msg.status.satellites_used = latest_info_.sat_used_pos;
     msg.status.satellites_visible = latest_info_.sat_primary;

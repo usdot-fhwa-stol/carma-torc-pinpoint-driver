@@ -137,6 +137,14 @@ struct VectorNED
 class PinPointGPSClient : public PinPoint
 {
 public:
+    
+    // /**
+    //  * @brief Initializes the base PinPointGPSClient class
+    //  *
+    //  * The underlying io service is setup
+    //  */
+    // PinPointGPSClient();
+    // virtual ~PinPointGPSClient();
 
     /**
      * @enum StatusCode
@@ -155,7 +163,6 @@ public:
         InvalidClock = 9,
         InvalidPosition = 10
     };
-
 
     struct PinPointStatusCode
     {

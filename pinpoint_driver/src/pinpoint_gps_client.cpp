@@ -37,7 +37,7 @@
 #include <pinpoint_driver/unpack_macros.h>
 
 
-const double rad_to_deg = 57.295779513
+const double rad_to_deg = 57.295779513;
 const long long two_to_thirty_one = 2147483648;
 const long long two_to_fifteenth  = 32768;
 

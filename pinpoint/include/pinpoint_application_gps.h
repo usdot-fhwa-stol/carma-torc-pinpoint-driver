@@ -42,6 +42,7 @@
 #include <pinpoint/pinpointConfig.h>
 
 #include <geometry_msgs/TwistStamped.h>
+#include <gps_common/GPSFix.h>
 #include <diagnostic_updater/diagnostic_updater.h>
 
 #include <ros/ros.h>
@@ -56,8 +57,6 @@
  */
 class PinPointApplication : public cav::DriverApplication
 {
-private:
-
 public:
     /**
      * @brief constructor
@@ -144,6 +143,13 @@ private:
      * On Disconnect this node will enter a reconnect loop attempting to the PinPoint device
      */
     void onDisconnectHandler();
+
+    /**
+     * @brief Translates status from the torc gps server into a ros gps status
+     * @param fixType
+     *
+     */
+    uint8_t PinpointGPSInfoToROSGPSStatus(torc::FixType fixType);
 
     /**
      * @brief Handles the PinPoint onRawGPSDataChanged handler
