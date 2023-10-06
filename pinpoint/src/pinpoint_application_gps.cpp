@@ -187,6 +187,7 @@ void PinPointApplication::onRawGPSDataChangedHandler(const torc::PinPointRawGPSD
     try 
     {
         msg.header.stamp.fromNSec(position.time * static_cast<uint64_t>(1000));
+        msg.status.header.stamp.fromNSec(latest_heading_.time * static_cast<uint64_t>(1000));
     }
     catch(std::runtime_error e)
     {
@@ -200,8 +201,8 @@ void PinPointApplication::onRawGPSDataChangedHandler(const torc::PinPointRawGPSD
 
     ROS_DEBUG_STREAM("Lat: " << position.latitude << " Lon: " << position.longitude << " Alt: " << position.altitude);
 
-    msg.track = latest_heading_.heading;
-    msg.speed = math.sqrt(math.pow(position.lat_vel, 2) + math.pow(position.lat_vel, 2));
+    msg.track = latest_heading_.heading < 0 ? 360 + latest_heading_.heading : latest_heading_.heading;
+    msg.speed = math.sqrt(math.pow(position.lat_vel, 2) + math.pow(position.lon_vel, 2));
     msg.climb = -position.down_vel;
 
     msg.err = position.pos_acc;

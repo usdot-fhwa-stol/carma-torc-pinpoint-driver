@@ -202,6 +202,8 @@ private:
     torc::PinPointFilterAccuracy latest_filter_accuracy_;
     torc::PinPointQuaternionCovariance latest_quaternion_covariance_;
     geometry_msgs::TwistStamped latest_velocity_;
+    torc::PinPointLocalizationClient::StatusCode latest_filter_status_code_;
+    torc::StatusCondition latest_filter_status_condition_;
 
     //Diagnostic Updater
     /**

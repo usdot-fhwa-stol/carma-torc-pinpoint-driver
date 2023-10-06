@@ -50,7 +50,8 @@ inline double rad2deg(double rad) { return rad*180.0/PI;}
 
 PinPointApplication::PinPointApplication(int argc, char **argv) : cav::DriverApplication(argc, argv, "pinpoint"),
                                                                   latest_filter_accuracy_(), latest_velocity_(),
-                                                                  latest_quaternion_covariance_() 
+                                                                  latest_quaternion_covariance_(), latest_filter_status_code_(), 
+                                                                  latest_filter_status_condition_() 
 {
     cav_msgs::DriverStatus status;
     status.status = cav_msgs::DriverStatus::OFF;
@@ -241,14 +242,16 @@ void PinPointApplication::onGlobalPoseChangedHandler(const torc::PinPointGlobalP
                                0.0,
                                0.0, 0.0, latest_filter_accuracy_.position.down * latest_filter_accuracy_.position.down};
 
+    msg.status.motion_source = (uint16_t) latest_filter_status_code_;
+    msg.status.orientation_source = (uint16_t) latest_filter_status_condition_;
     msg.status.position_source = gps_common::GPSStatus::SOURCE_GPS;
     msg.status.status = gps_common::GPSStatus::STATUS_FIX;
 
     // Convert yaw [-180,180] to  [0,360] degrees east of north
     msg.track = pose.yaw < 0 ? 360 + pose.yaw : pose.yaw;
+    msg.err_track = latest_filter_accuracy_.rotation.down;
 
     global_pose_pub_.publish(msg);
-
 }
 
 void PinPointApplication::onLocalPoseChangedHandler(const torc::PinPointLocalPose &pose) 
@@ -342,6 +345,8 @@ void PinPointApplication::onQuaternionCovarianceChangedHandler(const torc::PinPo
 
 void PinPointApplication::onStatusConditionChangedHandler(const torc::PinPointLocalizationClient::PinPointStatusCode &code) 
 {
+    latest_filter_status_condition_ = code.condition;
+    latest_filter_status_code_ = code.code;
     // Check to see if we are already tracking this code
     auto it = code_map_.find(code.code);
     if (it == code_map_.end()) 
