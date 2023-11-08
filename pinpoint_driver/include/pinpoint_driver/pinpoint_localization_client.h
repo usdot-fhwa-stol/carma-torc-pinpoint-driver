@@ -93,8 +93,8 @@ struct PinPointQuaternionCovariance
  */
 struct PinPointGlobalPose {
     uint64_t time;
-    float latitude;
-    float longitude;
+    double latitude;
+    double longitude;
     float altitude;
     float roll;
     float pitch;
