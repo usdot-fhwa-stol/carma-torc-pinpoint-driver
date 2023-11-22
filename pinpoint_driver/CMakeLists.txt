@@ -48,7 +48,8 @@ file(GLOB_RECURSE headers */*.hpp */*.h)
 add_library(pinpoint_driver
         ${headers}
         src/pinpoint_driver.cpp
-        src/pinpoint_localization_client.cpp)
+        src/pinpoint_localization_client.cpp
+        src/pinpoint_gps_client.cpp)
 
 target_link_libraries(pinpoint_driver ${Boost_LIBRARIES})
 

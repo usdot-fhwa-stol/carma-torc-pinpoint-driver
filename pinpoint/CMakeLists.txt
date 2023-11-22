@@ -144,8 +144,13 @@ add_executable(pinpoint_node
         ${headers}
          src/main.cpp
          src/pinpoint_application.cpp)
+add_executable(pinpoint_node_gps
+        ${headers}
+         src/main_gps.cpp
+         src/pinpoint_application_gps.cpp)
 
 target_link_libraries(pinpoint_node ${Boost_LIBRARIES} ${catkin_LIBRARIES})
+target_link_libraries(pinpoint_node_gps ${Boost_LIBRARIES} ${catkin_LIBRARIES})
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -156,6 +161,7 @@ target_link_libraries(pinpoint_node ${Boost_LIBRARIES} ${catkin_LIBRARIES})
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 add_dependencies(pinpoint_node ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
+add_dependencies(pinpoint_node_gps ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(${PROJECT_NAME}_node
@@ -178,6 +184,11 @@ add_dependencies(pinpoint_node ${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS}
 
 ## Mark executables and/or libraries for installation
 install(TARGETS pinpoint_node
+   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+install(TARGETS pinpoint_node_gps
    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

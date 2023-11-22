@@ -33,7 +33,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <pinpoint_driver/pinpoint_localization_client.h>
+#include <pinpoint_driver/pinpoint_gps_client.h>
 
 #include <cav_driver_utils/driver_application/driver_application.h>
 
@@ -42,6 +42,7 @@
 #include <pinpoint/pinpointConfig.h>
 
 #include <geometry_msgs/TwistStamped.h>
+#include <gps_common/GPSFix.h>
 #include <diagnostic_updater/diagnostic_updater.h>
 
 #include <ros/ros.h>
@@ -56,8 +57,6 @@
  */
 class PinPointApplication : public cav::DriverApplication
 {
-private:
-
 public:
     /**
      * @brief constructor
@@ -110,7 +109,7 @@ private:
     std::vector<std::string> api_;
 
     //ROS
-    ros::Publisher velocity_pub_,global_pose_pub_,local_pose_pub_,heading_pub_;
+    ros::Publisher gps_data_pub_;
     std::shared_ptr<ros::NodeHandle> position_api_nh_;
     std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
@@ -129,7 +128,7 @@ private:
     std::mutex heartbeat_mutex_;
 
     //PinPoint event handlers
-    torc::PinPointLocalizationClient pinpoint_;
+    torc::PinPointGPSClient pinpoint_;
 
     /**
      * @brief Handles the PinPoint onConnect Event
@@ -146,49 +145,38 @@ private:
     void onDisconnectHandler();
 
     /**
-     * @brief Handles the PinPoint onVelocityChanged event
-     * @param vel
+     * @brief Translates status from the torc gps server into a ros gps status
+     * @param fixType
      *
-     * This method translates the PinPoint velocity into base_link frame ad
-     * publishes the velocity as a geometry_msgs::Twist message out on the pinpoint/position/velocity topic
      */
-    void onVelocityChangedHandler(const  torc::PinPointVelocity& vel);
+    uint8_t PinpointGPSInfoToROSGPSStatus(torc::FixType fixType);
 
     /**
-     * @brief Handles the PinPoint onFilterAccuracyChanged event
-     * @param acc
-     *
-     * This method stores the filter accuracy in the local member variable to use
-     * for within other callbacks
-     */
-    void onFilterAccuracyChangedHandler(const torc::PinPointFilterAccuracy& acc);
-
-    /**
-     * @brief Handles the PinPoint onQuaternionCovarianceChanged event
-     * @param quat
-     *
-     * This method stores the quaternion and the covariance to local member variable to use
-     * within other callbacks
-     */
-    void onQuaternionCovarianceChangedHandler(const torc::PinPointQuaternionCovariance& quat);
-
-    /**
-     * @brief Handles the PinPoint onGlobalPoseChanged handler
+     * @brief Handles the PinPoint onRawGPSDataChanged handler
      * @param pose
      *
      * This method translates the PinPoint global pose into a sensor_msgs::NavSatFix and a cav_msgs::HeadingStamped
      * message published onto the corresponding topics /pinpoint/position/nav_sat_fix and /pinpoint/position/heading
      */
-    void onGlobalPoseChangedHandler(const torc::PinPointGlobalPose& pose);
+    void onRawGPSDataChangedHandler(const torc::PinPointRawGPSData& position);
 
     /**
-     * @brief Handles the PinPoint onLocalPoseChanged event
+     * @brief Handles the PinPoint onRawGPSHeadingChanged handler
      * @param pose
      *
-     * This method translates the PinPoint local pose into a nav_msgs::Odometry on topic /pinpoint/position/odometry.
-     * If publish_tf is set to true it also publishes this transform out onto tf
+     * This method stores the gps heading and heading accuracy in the local member variable to use
+     * for within other callbacks
      */
-    void onLocalPoseChangedHandler(const torc::PinPointLocalPose& pose);
+    void onRawGPSHeadingChangedHandler(const torc::PinPointRawGPSHeading& heading);
+
+    /**
+     * @brief Handles the PinPoint onGPSFixInfoChanged event
+     * @param acc
+     *
+     * This method stores the gps status and satellite information in the local member variable to use
+     * for within other callbacks
+     */
+    void onGPSFixInfoChangedHandler(const torc::PinPointGPSFixInfo& info);
 
     /**
      * @brief Handles the PinPoint onStatusConditionChanged event
@@ -197,13 +185,10 @@ private:
      * This method translates PinPoint status codes/conditions into updating the driver status used by the DriverApplication
      * class as well as updating diagnost_updater info
      */
-    void onStatusConditionChangedHandler(const torc::PinPointLocalizationClient::PinPointStatusCode& code );
+    void onStatusConditionChangedHandler(const torc::PinPointGPSClient::PinPointStatusCode& code );
 
-    torc::PinPointFilterAccuracy latest_filter_accuracy_;
-    torc::PinPointQuaternionCovariance latest_quaternion_covariance_;
-    geometry_msgs::TwistStamped latest_velocity_;
-    torc::PinPointLocalizationClient::StatusCode latest_filter_status_code_;
-    torc::StatusCondition latest_filter_status_condition_;
+    torc::PinPointRawGPSHeading latest_heading_;
+    torc::PinPointGPSFixInfo latest_info_;
 
     //Diagnostic Updater
     /**
@@ -215,7 +200,7 @@ private:
      */
     struct StatusMessageDiagnosticHelper
     {
-        torc::PinPointLocalizationClient::StatusCode code;
+        torc::PinPointGPSClient::StatusCode code;
         torc::StatusCondition condition;
 
         /**
@@ -242,22 +227,16 @@ private:
         {
             switch(code)
             {
-                case torc::PinPointLocalizationClient::StatusCode::Aligning: return "Aligning";
-                case torc::PinPointLocalizationClient::StatusCode::NoImuData: return "NoImuData";
-                case torc::PinPointLocalizationClient::StatusCode::NoGpsUpdates: return "NoGpsUpdates";
-                case torc::PinPointLocalizationClient::StatusCode::NoLeftWssUpdates: return "NoLeftWssUpdates";
-                case torc::PinPointLocalizationClient::StatusCode::NoRightWssUpdates: return "NoRightWssUpdates";
-                case torc::PinPointLocalizationClient::StatusCode::BadGpsPosAgreement: return "BadGpsPosAgreement";
-                case torc::PinPointLocalizationClient::StatusCode::BadGpsVelAgreement: return "BadGpsVelAgreement";
-                case torc::PinPointLocalizationClient::StatusCode::BadWssVelAgreement: return "BadWssVelAgreement";
-                case torc::PinPointLocalizationClient::StatusCode::BadGyroBiasEstimate: return "BadGyroBiasEstimate";
-                case torc::PinPointLocalizationClient::StatusCode::BadAccelBiasEstimate: return "BadAccelBiasEstimate";
-                case torc::PinPointLocalizationClient::StatusCode::PoseSteadying: return "PoseSteadying";
-                case torc::PinPointLocalizationClient::StatusCode::NoHeadingUpdates: return "NoHeadingUpdates";
-                case torc::PinPointLocalizationClient::StatusCode::BadHeadingAgreement: return "BadHeadingAgreement";
-                case torc::PinPointLocalizationClient::StatusCode::BadMeasurementTime: return "BadMeasurementTime";
-                case torc::PinPointLocalizationClient::StatusCode::IrregularTimeStep: return "IrregularTimeStep";
-                case torc::PinPointLocalizationClient::StatusCode::BadWssScaleFactor: return "BadWssScaleFactor";
+                case torc::PinPointGPSClient::StatusCode::CommsFailure: return "CommsFailure";
+                case torc::PinPointGPSClient::StatusCode::ReceiverFailure: return "ReceiverFailure";
+                case torc::PinPointGPSClient::StatusCode::BadTemperature: return "BadTemperature";
+                case torc::PinPointGPSClient::StatusCode::BadVoltage: return "BadVoltage";
+                case torc::PinPointGPSClient::StatusCode::AntennaOpen: return "AntennaOpen";
+                case torc::PinPointGPSClient::StatusCode::AntennaShort: return "AntennaShort";
+                case torc::PinPointGPSClient::StatusCode::CpuOverload: return "CpuOverload";
+                case torc::PinPointGPSClient::StatusCode::InvalidAlmanac: return "InvalidAlmanac";
+                case torc::PinPointGPSClient::StatusCode::InvalidClock: return "InvalidClock";
+                case torc::PinPointGPSClient::StatusCode::InvalidPosition: return "InvalidPosition";
                 default: return "Unknown Code";
             }
         }
@@ -311,8 +290,8 @@ private:
     }
 
     diagnostic_updater::Updater updater_;
-    std::map<torc::PinPointLocalizationClient::StatusCode, StatusMessageDiagnosticHelper> code_map_;
-    std::set<torc::PinPointLocalizationClient::StatusCode> error_set_;
-    std::set<torc::PinPointLocalizationClient::StatusCode> warning_set_;
+    std::map<torc::PinPointGPSClient::StatusCode, StatusMessageDiagnosticHelper> code_map_;
+    std::set<torc::PinPointGPSClient::StatusCode> error_set_;
+    std::set<torc::PinPointGPSClient::StatusCode> warning_set_;
 
 };
