@@ -30,6 +30,7 @@ RUN ~/src/docker/install.sh
 
 FROM base
 
+
 ARG BUILD_DATE="NULL"
 ARG VERSION="NULL"
 ARG VCS_REF="NULL"
