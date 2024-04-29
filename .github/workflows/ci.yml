@@ -41,7 +41,7 @@ jobs:
           echo git_branch="$GITHUB_BASE_REF" >> $GITHUB_OUTPUT
         else
           echo git_branch="$GITHUB_REF_NAME" >> $GITHUB_OUTPUT
-        figit 
+        fi 
     - name: Checkout dependencies
       run: |
         source "$INIT_ENV"
