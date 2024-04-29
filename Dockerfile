@@ -12,7 +12,11 @@
 #  License for the specific language governing permissions and limitations under
 #  the License.
 
-FROM usdotfhwastoldev/carma-base:develop as setup
+ARG DOCKER_ORG="usdotfhwastoldev"
+ARG DOCKER_TAG="develop"
+FROM ${DOCKER_ORG}/carma-base:${DOCKER_TAG} as base
+FROM base as setup
+ARG GIT_BRANCH="develop" 
 
 ARG ROS1_PACKAGES=""
 ENV ROS1_PACKAGES=${ROS1_PACKAGES}
@@ -21,10 +25,11 @@ ENV ROS2_PACKAGES=${ROS2_PACKAGES}
 
 RUN mkdir ~/src
 COPY --chown=carma . /home/carma/src/
-RUN ~/src/docker/checkout.sh
+RUN ~/src/docker/checkout.sh -b ${GIT_BRANCH}
 RUN ~/src/docker/install.sh
 
-FROM usdotfhwastoldev/carma-base:develop
+FROM base
+
 
 ARG BUILD_DATE="NULL"
 ARG VERSION="NULL"
