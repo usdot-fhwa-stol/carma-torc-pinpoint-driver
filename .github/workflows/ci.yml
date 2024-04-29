@@ -41,11 +41,11 @@ jobs:
           echo git_branch="$GITHUB_BASE_REF" >> $GITHUB_OUTPUT
         else
           echo git_branch="$GITHUB_REF_NAME" >> $GITHUB_OUTPUT
-        fi
+        figit 
     - name: Checkout dependencies
       run: |
         source "$INIT_ENV"
-        ./src/${{ github.event.repository.name }}/docker/checkout.sh  -r /opt/carma/ -b -b ${{ steps.determine-base-branch.outputs.git_branch }}
+        ./src/${{ github.event.repository.name }}/docker/checkout.sh  -r /opt/carma/ -b ${{ steps.determine-base-branch.outputs.git_branch }}
     - name: Build
       run: |
         source "$INIT_ENV"
