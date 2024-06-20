@@ -32,7 +32,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <pinpoint_application.h>
+#include <pinpoint_application_gps.h>
 #include <gps_common/GPSFix.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Odometry.h>
@@ -49,9 +49,7 @@ inline double deg2rad(double deg) { return deg*PI/180.0;}
 inline double rad2deg(double rad) { return rad*180.0/PI;}
 
 PinPointApplication::PinPointApplication(int argc, char **argv) : cav::DriverApplication(argc, argv, "pinpoint"),
-                                                                  latest_filter_accuracy_(), latest_velocity_(),
-                                                                  latest_quaternion_covariance_(), latest_filter_status_code_(), 
-                                                                  latest_filter_status_condition_() 
+                                                                  latest_heading_(), latest_info_()
 {
     cav_msgs::DriverStatus status;
     status.status = cav_msgs::DriverStatus::OFF;
@@ -63,14 +61,14 @@ void PinPointApplication::initialize()
 {
 
     // CAV platform requires that the position api falls under the /pinpoint/position namespace
-    position_api_nh_.reset(new ros::NodeHandle("/position"));
+    position_api_nh_.reset(new ros::NodeHandle("/raw_gps"));
 
     tf_buffer_.reset(new tf2_ros::Buffer());
     tf_listener_.reset(new tf2_ros::TransformListener(*tf_buffer_));
 
     // Pinpoint address
     pnh_->param<std::string>("address", config_.address, "10.26.4.73");
-    pnh_->param<std::string>("loc_port", config_.loc_port, "9501");
+    pnh_->param<std::string>("loc_port", config_.loc_port, "9503");
 
     // Frames
     pnh_->param<std::string>("odom_frame", odom_frame, "odom");
@@ -89,37 +87,23 @@ void PinPointApplication::initialize()
     std::string node_name = ros::this_node::getName();
     api_.clear();
 
-    // Velocity
-    velocity_pub_ = position_api_nh_->advertise<geometry_msgs::TwistStamped>("velocity", 1);
-    api_.push_back(velocity_pub_.getTopic());
+    // RawGPSData
+    gps_data_pub_ = position_api_nh_->advertise<gps_common::GPSFix>("pinpoint_fix", 1);
+    api_.push_back(gps_data_pub_.getTopic());
 
-    pinpoint_.onVelocityChanged.connect([this](torc::PinPointVelocity const &vel) { onVelocityChangedHandler(vel); });
+    pinpoint_.onRawGPSDataChanged
+            .connect([this](torc::PinPointRawGPSData const &pose) { onRawGPSDataChangedHandler(pose); });
 
-    // GlobalPose
-    global_pose_pub_ = position_api_nh_->advertise<gps_common::GPSFix>("gps_common_fix", 1);
-    api_.push_back(global_pose_pub_.getTopic());
-
-    pinpoint_.onGlobalPoseChanged
-            .connect([this](torc::PinPointGlobalPose const &pose) { onGlobalPoseChangedHandler(pose); });
-
-    // LocalPose
-    local_pose_pub_ = position_api_nh_->advertise<nav_msgs::Odometry>("odometry", 1);
-    api_.push_back(local_pose_pub_.getTopic());
-
-    pinpoint_.onLocalPoseChanged
-            .connect([this](torc::PinPointLocalPose const &pose) { onLocalPoseChangedHandler(pose); });
+    // RawGPSHeading
+    pinpoint_.onRawGPSHeadingChanged
+            .connect([this](torc::PinPointRawGPSHeading const &pose) { onRawGPSHeadingChangedHandler(pose); });
 
     // Other non-published pinpoint data
-    pinpoint_.onFilterAccuracyChanged
-            .connect([this](torc::PinPointFilterAccuracy const &acc) { onFilterAccuracyChangedHandler(acc); });
-
-    pinpoint_.onQuaternionCovarianceChanged
-            .connect([this](torc::PinPointQuaternionCovariance const &quat) {
-                onQuaternionCovarianceChangedHandler(quat);
-            });
+    pinpoint_.onGPSFixInfoChanged
+            .connect([this](torc::PinPointGPSFixInfo const &acc) { onGPSFixInfoChangedHandler(acc); });
 
     pinpoint_.onStatusConditionChanged
-            .connect([this](torc::PinPointLocalizationClient::PinPointStatusCode const &code) {
+            .connect([this](torc::PinPointGPSClient::PinPointStatusCode const &code) {
                 onStatusConditionChangedHandler(code);
             });
 
@@ -154,58 +138,39 @@ void PinPointApplication::onDisconnectHandler()
     ROS_WARN_STREAM("PinPoint Disconnected");
 }
 
+
 /**
+ * Converts from a torc pinpoint status to a ROS gps status
+ * We don't have access to whether or not the pinpoint has RTK corrections active
  *
- * Translates torc PinPoint Velocity into base_link_frame and publishes topic
  */
-void PinPointApplication::onVelocityChangedHandler(const torc::PinPointVelocity &vel) 
+uint8_t PinPointApplication::PinpointGPSInfoToROSGPSStatus(torc::FixType fixType)
 {
-    geometry_msgs::TwistStamped msg;
-
-    msg.header.frame_id = base_link_frame;
-    try 
+    switch (fixType)
     {
-        msg.header.stamp.fromNSec(vel.time * static_cast<uint64_t>(1000));
+        case torc::FixType::Unknown:
+        case torc::FixType::None:
+        default:
+        {
+            return gps_common::GPSStatus::STATUS_NO_FIX;
+        }
+        case torc::FixType::twoD:
+        case torc::FixType::threeD:
+        {
+            return gps_common::GPSStatus::STATUS_FIX;
+        }
+        case torc::FixType::SBAS:
+        {
+            return gps_common::GPSStatus::STATUS_SBAS_FIX;
+        }
+        case torc::FixType::OmniSTARVBS:
+        case torc::FixType::OmniSTARXP:
+        case torc::FixType::OmniSTARHP:
+        case torc::FixType::Terrastar:
+        {
+            return gps_common::GPSStatus::STATUS_DGPS_FIX;
+        }
     }
-    catch(std::runtime_error e)
-    {
-        ROS_WARN_STREAM("onVelocityChangedHandler through exception in ros::TimeBase::fromNSec(), time : " << vel.time);
-        return;
-    }
-
-    geometry_msgs::TransformStamped tf;
-    try 
-    {
-        tf = tf_buffer_->lookupTransform(base_link_frame,sensor_frame,msg.header.stamp);
-    }
-    catch(tf2::TransformException e)
-    {
-        ROS_WARN_STREAM_THROTTLE(5,"Exception looking up transform: " << e.what());
-        return;
-    }
-
-    geometry_msgs::Vector3Stamped vec_in, vec_out;
-    vec_in.vector.x = vel.forward_vel;
-    vec_in.vector.y = vel.right_vel;
-    vec_in.vector.z = vel.down_vel;
-    tf2::doTransform(vec_in,vec_out,tf);
-
-    msg.twist.linear.x = vec_out.vector.x;
-    msg.twist.linear.y = vec_out.vector.y;
-    msg.twist.linear.z = vec_out.vector.z;
-
-    vec_in.vector.x = vel.roll_rate;
-    vec_in.vector.y = vel.pitch_rate;
-    vec_in.vector.z = vel.yaw_rate;
-
-    tf2::doTransform(vec_in,vec_out,tf);
-
-    msg.twist.angular.x = vel.roll_rate;
-    msg.twist.angular.y = vel.pitch_rate;
-    msg.twist.angular.z = vel.yaw_rate;
-
-    velocity_pub_.publish(msg);
-    latest_velocity_ = msg;
 }
 
 /**
@@ -214,7 +179,7 @@ void PinPointApplication::onVelocityChangedHandler(const torc::PinPointVelocity 
  * Publishes cav_msgs/HeadingStamped msg from the PinPoint globalPose
  *
  */
-void PinPointApplication::onGlobalPoseChangedHandler(const torc::PinPointGlobalPose &pose) 
+void PinPointApplication::onRawGPSDataChangedHandler(const torc::PinPointRawGPSData &position) 
 {
    
     gps_common::GPSFix msg; 
@@ -222,131 +187,53 @@ void PinPointApplication::onGlobalPoseChangedHandler(const torc::PinPointGlobalP
 
     try 
     {
-        msg.header.stamp.fromNSec(pose.time * static_cast<uint64_t>(1000));
+        msg.header.stamp.fromNSec(position.time * static_cast<uint64_t>(1000));
+        msg.status.header.stamp.fromNSec(latest_heading_.time * static_cast<uint64_t>(1000));
     }
     catch(std::runtime_error e)
     {
-        ROS_WARN_STREAM("onGlobalPoseChangedHandler threw exception in ros::TimeBase::fromNSec(), time : " << pose.time);
+        ROS_WARN_STREAM("onRawGPSDataChangedHandler threw exception in ros::TimeBase::fromNSec(), time : " << position.time);
         return;
     }
 
-    msg.altitude = pose.altitude;
-    msg.longitude = pose.longitude;
-    msg.latitude = pose.latitude;
+    msg.latitude = position.latitude;
+    msg.longitude = position.longitude;
+    msg.altitude = position.altitude;
 
-    ROS_DEBUG_STREAM("Lat: " << pose.latitude << " Lon: " << pose.longitude << " Alt: " << pose.altitude);
+    ROS_DEBUG_STREAM("Lat: " << position.latitude << " Lon: " << position.longitude << " Alt: " << position.altitude);
 
-    msg.position_covariance_type = gps_common::GPSFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
-    msg.position_covariance = {latest_filter_accuracy_.position.east * latest_filter_accuracy_.position.east, 0.0, 0.0,
-                               0.0, latest_filter_accuracy_.position.north * latest_filter_accuracy_.position.north,
-                               0.0,
-                               0.0, 0.0, latest_filter_accuracy_.position.down * latest_filter_accuracy_.position.down};
+    msg.track = latest_heading_.heading < 0 ? 360 + latest_heading_.heading : latest_heading_.heading;
+    msg.speed = sqrt(position.lat_vel*position.lat_vel + position.lat_vel*position.lat_vel);
+    msg.climb = -position.down_vel;
 
-    msg.status.motion_source = (uint16_t) latest_filter_status_code_;
-    msg.status.orientation_source = (uint16_t) latest_filter_status_condition_;
+    msg.err = position.pos_acc;
+    msg.err_horz = position.pos_acc;
+    msg.err_vert = position.pos_acc;
+    msg.err_track = latest_heading_.heading_acc;
+    msg.err_speed = position.vel_acc;
+    msg.err_climb = position.vel_acc;
+
+    msg.status.satellites_used = latest_info_.sat_used_pos;
+    msg.status.satellites_visible = latest_info_.sat_primary;
     msg.status.position_source = gps_common::GPSStatus::SOURCE_GPS;
-    msg.status.status = gps_common::GPSStatus::STATUS_FIX;
+    msg.status.motion_source = gps_common::GPSStatus::SOURCE_GPS;
+    msg.status.status = PinPointApplication::PinpointGPSInfoToROSGPSStatus(latest_info_.fix_type);
 
-    // Convert yaw [-180,180] to  [0,360] degrees east of north
-    msg.track = pose.yaw < 0 ? 360 + pose.yaw : pose.yaw;
-    msg.err_track = latest_filter_accuracy_.rotation.down;
-
-    global_pose_pub_.publish(msg);
+    gps_data_pub_.publish(msg);
 }
 
-void PinPointApplication::onLocalPoseChangedHandler(const torc::PinPointLocalPose &pose) 
+void PinPointApplication::onRawGPSHeadingChangedHandler(const torc::PinPointRawGPSHeading &heading) 
 {
-    geometry_msgs::TransformStamped tf;
-
-    nav_msgs::Odometry msg;
-    msg.header.frame_id = odom_frame;
-    try 
-    {
-        msg.header.stamp.fromNSec(pose.time * static_cast<uint64_t>(1000));
-    }
-    catch(std::runtime_error e)
-    {
-        ROS_WARN_STREAM("onLocalPoseChangedHandler threw exception in ros::TimeBase::fromNSec(), time : " << pose.time);
-        return;
-    }
-    msg.child_frame_id = base_link_frame;
-
-    try 
-    {
-        tf = tf_buffer_->lookupTransform(base_link_frame,sensor_frame,msg.header.stamp);
-    }
-    catch(tf2::TransformException e)
-    {
-        ROS_WARN_STREAM_THROTTLE(5,"Exception looking up transform: " << e.what());
-        return;
-    }
-
-    geometry_msgs::PoseStamped pinpoint_pose;
-    pinpoint_pose.header.frame_id = sensor_frame;
-    pinpoint_pose.header.stamp = msg.header.stamp;
-
-    pinpoint_pose.pose.position.x = pose.north;
-    pinpoint_pose.pose.position.y = pose.east;
-    pinpoint_pose.pose.position.z = pose.down;
-
-    tf2::Quaternion pinpoint_quat;
-    pinpoint_quat.setRPY(deg2rad(pose.roll),deg2rad(pose.pitch),deg2rad(pose.yaw));
-
-    pinpoint_pose.pose.orientation.x = pinpoint_quat.x();
-    pinpoint_pose.pose.orientation.y = pinpoint_quat.y();
-    pinpoint_pose.pose.orientation.z = pinpoint_quat.z();
-    pinpoint_pose.pose.orientation.w = pinpoint_quat.w();
-
-    geometry_msgs::PoseStamped out;
-    tf2::doTransform(pinpoint_pose,out,tf);
-
-    msg.pose.pose.position = out.pose.position;
-    msg.pose.pose.orientation = out.pose.orientation;
-
-    msg.pose.covariance =
-            {
-                    0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0,
-                    0, 0, 0, latest_quaternion_covariance_.covariance[0][0], 0, 0,
-                    0, 0, 0, 0, latest_quaternion_covariance_.covariance[1][1], 0,
-                    0, 0, 0, 0, 0, latest_quaternion_covariance_.covariance[2][2]
-            };
-
-    msg.twist.twist = latest_velocity_.twist;
-
-    local_pose_pub_.publish(msg);
-
-    if (publish_tf) 
-    {
-        static tf2_ros::TransformBroadcaster br;
-        geometry_msgs::TransformStamped transformStamped;
-
-        transformStamped.header = msg.header;
-        transformStamped.child_frame_id = msg.child_frame_id;
-        transformStamped.transform.translation.x = msg.pose.pose.position.x;
-        transformStamped.transform.translation.y = msg.pose.pose.position.y;
-        transformStamped.transform.translation.z = msg.pose.pose.position.z;
-
-        transformStamped.transform.rotation = msg.pose.pose.orientation;
-        br.sendTransform(transformStamped);
-    }
+    latest_heading_ = heading;
 }
 
-void PinPointApplication::onFilterAccuracyChangedHandler(const torc::PinPointFilterAccuracy &acc) 
+void PinPointApplication::onGPSFixInfoChangedHandler(const torc::PinPointGPSFixInfo &info) 
 {
-    latest_filter_accuracy_ = acc;
+    latest_info_ = info;
 }
 
-void PinPointApplication::onQuaternionCovarianceChangedHandler(const torc::PinPointQuaternionCovariance &quat) 
+void PinPointApplication::onStatusConditionChangedHandler(const torc::PinPointGPSClient::PinPointStatusCode &code) 
 {
-    latest_quaternion_covariance_ = quat;
-}
-
-void PinPointApplication::onStatusConditionChangedHandler(const torc::PinPointLocalizationClient::PinPointStatusCode &code) 
-{
-    latest_filter_status_condition_ = code.condition;
-    latest_filter_status_code_ = code.code;
     // Check to see if we are already tracking this code
     auto it = code_map_.find(code.code);
     if (it == code_map_.end()) 
