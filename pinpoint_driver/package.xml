@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>pinpoint_driver</name>
-  <version>1.0.0</version>
+  <version>4.0.0</version>
   <description>The pinpoint_driver package</description>
   <maintainer email="carma@dot.gov">carma</maintainer>
   <license>BSD</license>

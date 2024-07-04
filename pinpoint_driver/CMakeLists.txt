@@ -22,3 +22,8 @@ ament_auto_add_library(pinpoint_driver SHARED
         src/pinpoint_driver.cpp
         src/pinpoint_localization_client.cpp
 )
+
+# Install
+ament_auto_package(
+        INSTALL_TO_SHARE
+)

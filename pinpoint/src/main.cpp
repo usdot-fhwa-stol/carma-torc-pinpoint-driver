@@ -32,11 +32,19 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <pinpoint_application.h>
+#include <pinpoint_application.hpp>
 
-int main(int argc, char**argv)
+int main(int argc, char ** argv)
 {
-    PinPointApplication app(argc,argv);
+  rclcpp::init(argc, argv);
 
-    return app.run();
+  auto node = std::make_shared<pinpoint::PinPointApplication>(rclcpp::NodeOptions());
+
+  rclcpp::executors::MultiThreadedExecutor executor;
+  executor.add_node(node->get_node_base_interface());
+  executor.spin();
+
+  rclcpp::shutdown();
+
+  return 0;
 }
