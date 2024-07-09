@@ -1,4 +1,5 @@
-#  Copyright (C) 2018-2020 LEIDOS.
+# Metadata and license information
+#  Copyright (C) 2024 LEIDOS.
 #
 #  Licensed under the Apache License, Version 2.0 (the "License"); you may not
 #  use this file except in compliance with the License. You may obtain a copy of
@@ -12,29 +13,36 @@
 #  License for the specific language governing permissions and limitations under
 #  the License.
 
+# Base image for build
 ARG DOCKER_ORG="usdotfhwastoldev"
 ARG DOCKER_TAG="develop"
-FROM ${DOCKER_ORG}/carma-base:${DOCKER_TAG} as base
-FROM base as setup
-ARG GIT_BRANCH="develop"
+FROM 302cb1d9975a as base
 
-ARG ROS1_PACKAGES=""
-ENV ROS1_PACKAGES=${ROS1_PACKAGES}
+# Setup stage
+FROM 302cb1d9975a as setup
+
+# Arguments for customization
+ARG GIT_BRANCH="develop"
 ARG ROS2_PACKAGES=""
 ENV ROS2_PACKAGES=${ROS2_PACKAGES}
 
-RUN mkdir ~/src
+# Create source directory and copy files
+RUN mkdir -p ~/src
 COPY --chown=carma . /home/carma/src/
+
+# Checkout the specified branch
 RUN ~/src/docker/checkout.sh -b ${GIT_BRANCH}
+
+# Install dependencies
 RUN ~/src/docker/install.sh
 
-FROM base
+# Final stage
+FROM 302cb1d9975a
 
-
+# Metadata
 ARG BUILD_DATE="NULL"
 ARG VERSION="NULL"
 ARG VCS_REF="NULL"
-
 LABEL org.label-schema.schema-version="1.0"
 LABEL org.label-schema.name="carma-torc-pinpoint-driver"
 LABEL org.label-schema.description="Torc Pinpoint localization driver for the CARMA Platform"
@@ -45,7 +53,14 @@ LABEL org.label-schema.vcs-url="https://github.com/usdot-fhwa-stol/carma-torc-pi
 LABEL org.label-schema.vcs-ref=${VCS_REF}
 LABEL org.label-schema.build-date=${BUILD_DATE}
 
+# Copy artifacts from setup stage
 COPY --from=setup /home/carma/install /opt/carma/install
+
+# Make sure permissions are correct
 RUN sudo chmod -R +x /opt/carma/install
 
-CMD  ["ros2 launch", "pinpoint", "pinpoint.launch.py", "remap_ns:=/saxton_cav/drivers" ]
+# Source the ROS setup file
+RUN echo "source /opt/carma/install/setup.bash" >> ~/.bashrc
+
+# Default command to run
+CMD ["ros2", "launch", "pinpoint", "pinpoint.launch.py", "remap_ns:=/saxton_cav/drivers"]
