@@ -13,11 +13,6 @@ ament_auto_find_build_dependencies()
 set(node_exec pinpoint_node_exec)
 set(node_lib pinpoint_node)
 
-## Generate dynamic reconfigure parameters in the 'cfg' folder
-#generate_dynamic_reconfigure_options(
-#  cfg/pinpoint.cfg
-#)
-
 # Includes
 include_directories(
   include
@@ -43,5 +38,5 @@ target_link_libraries(${node_exec}
 )
 
 ament_auto_package(
-  INSTALL_TO_SHARE
+  INSTALL_TO_SHARE config launch
 )

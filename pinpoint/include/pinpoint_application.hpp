@@ -54,6 +54,8 @@
 #include <gps_msgs/msg/gps_fix.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
+#include <pinpoint_config.hpp>
+
 namespace pinpoint
 {
 /**
@@ -76,45 +78,28 @@ public:
   }
 
 private:
-  /**
-   * @brief Called by the base DriverApplication class to fetch this implementation's api
-   *
-   * The API is a list of fully scoped names to topics and services specified by the
-   * CAV Platform architecture
-   *
-   * @return list of api
-   */
-  // TODO inline virtual std::vector<std::string> & get_api() override { return api_; }
-  std::vector<std::string> api_;
-
-  // ROS
-  carma_ros2_utils::PubPtr<geometry_msgs::msg::TwistStamped> velocity_pub_;
-  carma_ros2_utils::PubPtr<gps_msgs::msg::GPSFix> global_pose_pub_;
-  carma_ros2_utils::PubPtr<nav_msgs::msg::Odometry> local_pose_pub_;
-
-  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
-  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
-
   // parameters
-  std::string base_link_frame = "base_link";
-  std::string odom_frame = "odom";
-  std::string sensor_frame = "pinpoint";
-  std::string address = "10.26.4.73";
-  std::string loc_port = "9501";
-  bool publish_tf = false;
+  PinPointConfig config_;
 
-  // pinpoint::pinpointConfig ;
+  ///////////
+  // DRIVER
+  ///////////
+  rclcpp::TimerBase::SharedPtr spin_timer_;
 
-  // dynamic_reconfigure::Server<pinpoint::pinpointConfig> server;
-  // void dynReconfigCB(pinpoint::pinpointConfig & cfg, uint32_t level);
-  bool connecting_ = false;
-  std::shared_ptr<std::thread> connect_thread_;
-
-  rclcpp::Time last_heartbeat_time_;
-  std::mutex heartbeat_mutex_;
+  /**
+   * @brief Spin callback for the node to check connection, attempt connection, and check heartbeat
+   * for setting driver status
+   */
+  void spin_callback();
 
   // PinPoint event handlers
+  bool connecting_ = false;
+  std::shared_ptr<std::thread> connect_thread_;
+  rclcpp::Time last_heartbeat_time_;
+  std::mutex heartbeat_mutex_;
   torc::PinPointLocalizationClient pinpoint_;
+  torc::PinPointFilterAccuracy latest_filter_accuracy_;
+  torc::PinPointQuaternionCovariance latest_quaternion_covariance_;
 
   /**
    * @brief Handles the PinPoint onConnect Event
@@ -190,19 +175,33 @@ private:
   void onStatusConditionChangedHandler(
     const torc::PinPointLocalizationClient::PinPointStatusCode & code);
 
-  // TODO
+  ///////////
+  // ROS
+  ///////////
+
+  rcl_interfaces::msg::SetParametersResult parameter_update_callback(
+    const std::vector<rclcpp::Parameter> & parameters);
   carma_ros2_utils::CallbackReturn handle_on_configure(const rclcpp_lifecycle::State &);
+  carma_ros2_utils::CallbackReturn handle_on_activate(const rclcpp_lifecycle::State &);
   carma_driver_msgs::msg::DriverStatus getStatus();
-  void spin_callback();
-
   void setStatus(const carma_driver_msgs::msg::DriverStatus status);
-  carma_driver_msgs::msg::DriverStatus status_;
-  torc::PinPointFilterAccuracy latest_filter_accuracy_;
-  torc::PinPointQuaternionCovariance latest_quaternion_covariance_;
-  geometry_msgs::msg::TwistStamped latest_velocity_;
-  int spin_rate_ = 50;
 
+  // publishers
+  carma_ros2_utils::PubPtr<geometry_msgs::msg::TwistStamped> velocity_pub_;
+  carma_ros2_utils::PubPtr<gps_msgs::msg::GPSFix> global_pose_pub_;
+  carma_ros2_utils::PubPtr<nav_msgs::msg::Odometry> local_pose_pub_;
+
+  // tf2
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+
+  // ros parameters
+  carma_driver_msgs::msg::DriverStatus status_;
+  geometry_msgs::msg::TwistStamped latest_velocity_;
+
+  ////////////////////////
   // Diagnostic Updater
+  ////////////////////////
   /**
    * @brief This is a helper class for the Diagnostic Updater
    *
@@ -317,7 +316,6 @@ private:
   };
 
   rclcpp::TimerBase::SharedPtr diagnostic_timer_;
-  rclcpp::TimerBase::SharedPtr spin_timer_;
 
   /**
    * @brief Called by the diagnostic_timer_ to fire the diagnostic_updater update

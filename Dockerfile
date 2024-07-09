@@ -1,11 +1,11 @@
 #  Copyright (C) 2018-2020 LEIDOS.
-# 
+#
 #  Licensed under the Apache License, Version 2.0 (the "License"); you may not
 #  use this file except in compliance with the License. You may obtain a copy of
 #  the License at
-# 
+#
 #  http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 #  Unless required by applicable law or agreed to in writing, software
 #  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
 #  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -16,7 +16,7 @@ ARG DOCKER_ORG="usdotfhwastoldev"
 ARG DOCKER_TAG="develop"
 FROM ${DOCKER_ORG}/carma-base:${DOCKER_TAG} as base
 FROM base as setup
-ARG GIT_BRANCH="develop" 
+ARG GIT_BRANCH="develop"
 
 ARG ROS1_PACKAGES=""
 ENV ROS1_PACKAGES=${ROS1_PACKAGES}
@@ -48,4 +48,4 @@ LABEL org.label-schema.build-date=${BUILD_DATE}
 COPY --from=setup /home/carma/install /opt/carma/install
 RUN sudo chmod -R +x /opt/carma/install
 
-CMD  [ "wait-for-it.sh", "localhost:11311", "--", "roslaunch", "pinpoint", "pinpoint.launch", "remap_ns:=/saxton_cav/drivers" ]
+CMD  ["ros2 launch", "pinpoint", "pinpoint.launch.py", "remap_ns:=/saxton_cav/drivers" ]

@@ -1,0 +1,6 @@
+# Spin rate of the node to check connection, attempt connection, and check heartbeat for
+# setting driver status, Unit: Hz (int)
+spin_rate: 50
+
+#if set to true, this driver will publish the odom->base_link transform
+publish_tf: false
