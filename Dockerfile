@@ -1,4 +1,3 @@
-# Metadata and license information
 #  Copyright (C) 2024 LEIDOS.
 #
 #  Licensed under the Apache License, Version 2.0 (the "License"); you may not
@@ -16,10 +15,10 @@
 # Base image for build
 ARG DOCKER_ORG="usdotfhwastoldev"
 ARG DOCKER_TAG="develop"
-FROM 302cb1d9975a as base
+FROM ${DOCKER_ORG}/carma-base:${DOCKER_TAG} as base
 
 # Setup stage
-FROM 302cb1d9975a as setup
+FROM base as setup
 
 # Arguments for customization
 ARG GIT_BRANCH="develop"
@@ -37,7 +36,7 @@ RUN ~/src/docker/checkout.sh -b ${GIT_BRANCH}
 RUN ~/src/docker/install.sh
 
 # Final stage
-FROM 302cb1d9975a
+FROM base
 
 # Metadata
 ARG BUILD_DATE="NULL"
