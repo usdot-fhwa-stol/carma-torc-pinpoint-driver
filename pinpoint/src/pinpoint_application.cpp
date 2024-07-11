@@ -206,7 +206,7 @@ void PinPointApplication::onVelocityChangedHandler(const torc::PinPointVelocity 
   try {
     msg.header.stamp = rclcpp::Time(
       vel.time * static_cast<uint64_t>(1000));  // use nanoseconds constructor to get time
-  } catch (std::runtime_error e) {
+  } catch (const std::runtime_error& e) {
     RCLCPP_WARN_STREAM(
       rclcpp::get_logger("pinpoint"),
       "onVelocityChangedHandler through exception in rclcpp::Time(nanoseconds), time : "
@@ -218,14 +218,15 @@ void PinPointApplication::onVelocityChangedHandler(const torc::PinPointVelocity 
   try {
     tf =
       tf_buffer_->lookupTransform(config_.base_link_frame, config_.sensor_frame, msg.header.stamp);
-  } catch (tf2::TransformException e) {
+  } catch (const tf2::TransformException & e) {
     RCLCPP_WARN_STREAM_THROTTLE(
       rclcpp::get_logger("pinpoint"), *this->get_clock(), 5,
       "Exception looking up transform: " << e.what());
     return;
   }
 
-  geometry_msgs::msg::Vector3Stamped vec_in, vec_out;
+  geometry_msgs::msg::Vector3Stamped vec_in;
+  geometry_msgs::msg::Vector3Stamped vec_out;
   vec_in.vector.x = vel.forward_vel;
   vec_in.vector.y = vel.right_vel;
   vec_in.vector.z = vel.down_vel;
@@ -256,7 +257,7 @@ void PinPointApplication::onGlobalPoseChangedHandler(const torc::PinPointGlobalP
 
   try {
     msg.header.stamp = rclcpp::Time(pose.time * static_cast<uint64_t>(1000));
-  } catch (std::runtime_error e) {
+  } catch (const std::runtime_error& e) {
     RCLCPP_WARN_STREAM(
       rclcpp::get_logger("pinpoint"),
       "onGlobalPoseChangedHandler threw exception in rclcpp::Time(nanoseconds), time : "
@@ -295,7 +296,7 @@ void PinPointApplication::onLocalPoseChangedHandler(const torc::PinPointLocalPos
   msg.header.frame_id = config_.odom_frame;
   try {
     msg.header.stamp = rclcpp::Time(pose.time * static_cast<uint64_t>(1000));
-  } catch (std::runtime_error e) {
+  } catch (const std::runtime_error& e) {
     RCLCPP_WARN_STREAM(
       rclcpp::get_logger("pinpoint"),
       "onLocalPoseChangedHandler threw exception in rclcpp::Time(nanoseconds), time: "
@@ -307,7 +308,7 @@ void PinPointApplication::onLocalPoseChangedHandler(const torc::PinPointLocalPos
   try {
     tf =
       tf_buffer_->lookupTransform(config_.base_link_frame, config_.sensor_frame, msg.header.stamp);
-  } catch (tf2::TransformException e) {
+  } catch (const tf2::TransformException & e) {
     RCLCPP_WARN_STREAM_THROTTLE(
       rclcpp::get_logger("pinpoint"), *this->get_clock(), 5,
       "Exception looking up transform: " << e.what());
@@ -408,8 +409,7 @@ void PinPointApplication::onStatusConditionChangedHandler(
   const torc::PinPointLocalizationClient::PinPointStatusCode & code)
 {
   // Check to see if we are already tracking this code
-  auto it = code_map_.find(code.code);
-  if (it == code_map_.end()) {
+  if (auto it = code_map_.find(code.code); it == code_map_.end()) {
     // If the code is not tracked we need to create a DiagnostHelper object for it and add it to our
     // sotre
     StatusMessageDiagnosticHelper stat;
@@ -508,7 +508,7 @@ void PinPointApplication::spin_callback()
         pinpoint_.Close();
       }
 
-    } catch (std::runtime_error e) {
+    } catch (const std::runtime_error& e) {
       RCLCPP_WARN_STREAM(
         rclcpp::get_logger("pinpoint"),
         "spin_callback threw exception in rclcpp::TimeBase::fromNSec(), ex: " << e.what());
