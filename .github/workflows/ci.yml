@@ -49,8 +49,7 @@ jobs:
       - name: Build
         run: |
           source "$INIT_ENV"
-          # Ensure the script contains the necessary colcon build command with the compile_commands.json flag
-          echo 'colcon build --parallel-workers 4 --event-handlers console_direct+ --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON --packages-up-to pinpoint pinpoint_driver' >> /home/carma/.ci-image/engineering_tools/code_coverage/make_with_coverage.bash
+          sed -i '/colcon build/ s/$/ --packages-up-to pinpoint pinpoint_driver/' /home/carma/.ci-image/engineering_tools/code_coverage/make_with_coverage.bash
           make_with_coverage.bash -m -e /opt/carma/ -o ./coverage_reports/gcov
       - name: Debug 1
         run: |
@@ -65,8 +64,7 @@ jobs:
       - name: Run C++ Tests
         run: |
           source "$INIT_ENV"
-          # Ensure the script contains the necessary colcon test command
-          echo 'colcon test --return-code-on-test-failure --parallel-workers 4 --event-handlers console_direct+ --ctest-args -DCMAKE_CXX_FLAGS="${COVERAGE_FLAGS}" -DCMAKE_C_FLAGS="${COVERAGE_FLAGS}" -DCMAKE_BUILD_TYPE="Debug" --packages-above pinpoint pinpoint_driver' >> /home/carma/.ci-image/engineering_tools/code_coverage/make_with_coverage.bash
+          sed -i '/colcon test/ s/$/ --packages-above pinpoint pinpoint_driver/' /home/carma/.ci-image/engineering_tools/code_coverage/make_with_coverage.bash
           make_with_coverage.bash -t -e /opt/carma/ -o ./coverage_reports/gcov
       - name: Debug 2
         run: |
