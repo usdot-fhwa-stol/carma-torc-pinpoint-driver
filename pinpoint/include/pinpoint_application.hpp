@@ -310,8 +310,6 @@ private:
       stat.summaryf(
         level, "StatusCode: %s, Condition: %s", codeAsString().c_str(),
         conditionAsString().c_str());
-      // std::cout << "Code: " << codeAsString().c_str() << ", Condition: " <<
-      // conditionAsString().c_str() << std::endl;
     }
   };
 

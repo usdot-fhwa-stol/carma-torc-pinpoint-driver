@@ -426,8 +426,8 @@ void PinPointApplication::onStatusConditionChangedHandler(
   // update the condition
   code_map_[code.code].condition = code.condition;
 
-  // For the driverstatus state we need to know if we are in error or warning we maintain two sets
-  // of the
+  // For the driver status state, we need to know if we are in an error or warning condition.
+  // We maintain two sets: one for warnings and one for errors.
   if (code.condition == torc::StatusCondition::Error) {
     warning_set_.erase(code.code);
     error_set_.insert(code.code);
