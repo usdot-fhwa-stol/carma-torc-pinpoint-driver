@@ -49,11 +49,20 @@ jobs:
       - name: Build
         run: |
           source "$INIT_ENV"
+          # Ensure colcon build command includes the necessary flags for generating compile_commands.json
+          sed -i '/colcon build/!a colcon build --parallel-workers 4 --event-handlers console_direct+ --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON' /home/carma/.ci-image/engineering_tools/code_coverage/make_with_coverage.bash
           sed -i '/colcon build/ s/$/ --packages-up-to pinpoint pinpoint_driver/' /home/carma/.ci-image/engineering_tools/code_coverage/make_with_coverage.bash
           make_with_coverage.bash -m -e /opt/carma/ -o ./coverage_reports/gcov
       - name: Debug 1
         run: |
           ls /opt/carma/build
+          # Verify that compile_commands.json is generated
+          if [ -f /opt/carma/build/compile_commands.json ]; then
+            echo "compile_commands.json successfully generated"
+          else
+            echo "Error: compile_commands.json not found in /opt/carma/build/"
+            exit 1
+          fi
       - name: Run C++ Tests
         run: |
           source "$INIT_ENV"
