@@ -1,0 +1,10 @@
+# Spin rate of the node to check connection, attempt connection, and check heartbeat for
+# setting driver status, Unit: Hz (int)
+spin_rate: 50
+
+#if set to true, this driver will publish the odom->base_link transform
+publish_tf: false
+
+# Following parameters are modified using launch file. They can be passed on as variables
+# from carma-config:
+# base_link_frame, odom_frame, sensor_frame, address, loc_port
