@@ -13,15 +13,15 @@
 #  the License.
 
 # Base image for build
-ARG DOCKER_ORG="usdotfhwastoldev"
-ARG DOCKER_TAG="develop-humble"
+ARG DOCKER_ORG="usdotfhwastolcandidate"
+ARG DOCKER_TAG="test_run-humble"
 FROM ${DOCKER_ORG}/carma-base:${DOCKER_TAG} as base
 
 # Setup stage
 FROM base as setup
 
 # Arguments for customization
-ARG GIT_BRANCH="develop"
+ARG GIT_BRANCH="release/test_run"
 ARG ROS2_PACKAGES=""
 ENV ROS2_PACKAGES=${ROS2_PACKAGES}
 
