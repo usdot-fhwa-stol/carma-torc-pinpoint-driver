@@ -5,4 +5,6 @@ on:
 
 jobs:
   docker:
+    with:
+      tag_name_suffix: humble
     uses: usdot-fhwa-stol/actions/.github/workflows/docker.yml@main
