@@ -1,8 +1,11 @@
 name: Docker build
 on:
+  workflow_dispatch:
   pull_request:
     types: [opened, synchronize, reopened]
 
 jobs:
   docker:
+    with:
+      tag_name_suffix: humble
     uses: usdot-fhwa-stol/actions/.github/workflows/docker.yml@main
