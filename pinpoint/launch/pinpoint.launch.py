@@ -39,6 +39,15 @@ def generate_launch_description():
         get_package_share_directory("pinpoint"), "config/parameters.yaml"
     )
 
+    # Declare the global_params_override_file launch argument
+    # Parameters in this file will override any parameters loaded in their respective packages
+    global_params_override_file = LaunchConfiguration('global_params_override_file')
+    declare_global_params_override_file_arg = DeclareLaunchArgument(
+        name = 'global_params_override_file',
+        default_value = "/opt/carma/vehicle/GlobalParamsOverride.yaml",
+        description = "Path to global file containing the parameters overwrite"
+    )
+
     # Args for driver
     address = LaunchConfiguration("address")
     declare_address = DeclareLaunchArgument(
@@ -101,6 +110,7 @@ def generate_launch_description():
                     {'odom_frame' : odom_frame},
                     {'base_link_frame' : base_link_frame},
                     {'sensor_frame' : sensor_frame},
+                    global_params_override_file,
                 ],
             ),
         ],
@@ -115,6 +125,7 @@ def generate_launch_description():
             declare_base_link_frame,
             declare_sensor_frame,
             declare_remap_ns,
+            declare_global_params_override_file_arg,
             container,
         ]
     )
